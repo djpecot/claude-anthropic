@@ -19,18 +19,19 @@ if prompt := st.chat_input("Say something to Claude"):
     with st.chat_message("user"):
         st.markdown(prompt)
 
-    # Call Claude API
+    # Call Claude API with streaming
     client = anthropic.Anthropic(api_key=st.secrets["ANTHROPIC_API_KEY"])
-    response = client.messages.create(
+    response_text = ""
+    with client.messages.stream(
         model="claude-3-5-sonnet-20240620",
         max_tokens=1024,
         messages=[{"role": "user", "content": prompt}]
-    )
-
-    # Extract and display assistant response text
-    response_text = response.content[0].text
-    with st.chat_message("assistant"):
-        st.markdown(response_text)
+    ) as stream:
+        assistant_message = st.chat_message("assistant")
+        message_placeholder = assistant_message.empty()
+        for text in stream.text_stream:
+            response_text += text
+            message_placeholder.markdown(response_text)
     
     # Add assistant response to chat history
     st.session_state.messages.append({"role": "assistant", "content": response_text})
